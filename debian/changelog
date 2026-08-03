@@ -1,0 +1,19 @@
+nsjail (3.6+git20260727-2) unstable; urgency=medium
+
+  * Ship an AppArmor profile granting nsjail unprivileged CLONE_NEWUSER, so
+    it runs without root on Ubuntu (which blocks unprivileged user
+    namespaces via AppArmor by default).
+
+ -- Marcin Bieńkowski <marcin.bienkowski@gmail.com>  Sun, 02 Aug 2026 23:28:23 +0200
+
+nsjail (3.6+git20260727-1) unstable; urgency=medium
+
+  * Bump nsjail submodule to upstream commit 5ebcc30 (2026-07-27).
+
+ -- Marcin Bieńkowski <marcin.bienkowski@gmail.com>  Sat, 01 Aug 2026 00:57:20 +0200
+
+nsjail (3.6+git20260713-1) unstable; urgency=medium
+
+  * Initial release.
+
+ -- Marcin Bieńkowski <marcin.bienkowski@gmail.com>  Mon, 13 Jul 2026 11:40:46 +0200

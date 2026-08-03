@@ -1,0 +1,141 @@
+name: Build .deb
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build-ubuntu:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      # Runs before the full build so the PR comment below shows up quickly, without waiting on
+      # the build+smoke-test - the version this reads (debian/changelog's committed top entry)
+      # doesn't depend on either.
+      - name: Compute package version
+        id: pkg-version
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev
+          echo "version=$(dpkg-parsechangelog -SVersion)" >>"$GITHUB_OUTPUT"
+
+      # See README.md's "Updating and releasing": the tag to push after merge is `v<this version>`.
+      # message-id makes this a sticky comment - updated in place on later pushes to the PR
+      # rather than piling up a new one each time.
+      - name: Comment package version on PR
+        if: github.event_name == 'pull_request'
+        uses: mshick/add-pr-comment@v3.12.0
+        with:
+          message: >-
+            Package version: `${{ steps.pkg-version.outputs.version }}` — tag to push after
+            merge: `v${{ steps.pkg-version.outputs.version }}`
+          message-id: pkg-version
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get install -y build-essential debhelper dh-apparmor devscripts dpkg-dev \
+            protobuf-compiler libprotobuf-dev libnl-route-3-dev pkg-config \
+            bison flex
+
+      - name: Build .deb
+        run: bash scripts/build.sh
+
+      - name: Install .deb
+        run: sudo apt-get install -y ./nsjail_*.deb
+
+      - name: Install smoke-test dependencies
+        run: |
+          sudo apt-get install -y wget python3 strace busybox-static passt
+
+      - name: Run smoke test
+        run: bash scripts/ci-smoke-test.sh
+
+      - name: Upload .deb artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: nsjail-deb-ubuntu24.04
+          path: nsjail_*.deb
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: nsjail_*.deb
+
+  build-debian:
+    runs-on: ubuntu-24.04
+    container:
+      image: debian:13
+      # nsjail's own upstream README documents `docker run --privileged` as how to run it in
+      # Docker at all, and nsjail's own CI never attempts anything narrower. Confirmed locally
+      # that no smaller combination of --cap-add/--security-opt gets past nsjail's pivot_root
+      # step - only --privileged does.
+      options: --privileged
+    steps:
+      # actions/checkout needs `git` on PATH for submodule support, and this base image has
+      # neither it nor ca-certificates preinstalled - has to run before checkout itself.
+      - name: Install checkout prerequisites
+        run: |
+          apt-get update
+          apt-get install -y git ca-certificates
+          # actions/checkout only registers safe.directory in a config scoped to its own step
+          # (container jobs mount the workspace with the host runner's UID, which doesn't match
+          # the container's root - git's dubious-ownership check then blocks our own later git
+          # commands, e.g. in scripts/bump-changelog.sh, unless we register it ourselves too).
+          git config --global --add safe.directory '*'
+
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          apt-get install -y build-essential debhelper dh-apparmor devscripts dpkg-dev \
+            protobuf-compiler libprotobuf-dev libnl-route-3-dev pkg-config \
+            bison flex
+
+      - name: Build .deb
+        run: bash scripts/build.sh debian
+
+      - name: Install .deb
+        run: apt-get install -y ./nsjail_*.deb
+
+      - name: Install smoke-test dependencies
+        run: |
+          apt-get install -y wget python3 strace busybox-static passt
+
+      # NSJAIL_SKIP_CONTAINER_QUIRKS skips 3 tests that are artifacts of running as root in a
+      # bare `container:` job (no login session, GH-Actions-owned $HOME) - see
+      # ci-smoke-test-README.md. Not set for build-ubuntu, which runs directly on the VM.
+      - name: Run smoke test
+        env:
+          NSJAIL_SKIP_CONTAINER_QUIRKS: "1"
+        run: bash scripts/ci-smoke-test.sh
+
+      - name: Upload .deb artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: nsjail-deb-debian13
+          path: nsjail_*.deb
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: nsjail_*.deb

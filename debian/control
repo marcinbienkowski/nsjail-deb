@@ -1,0 +1,20 @@
+Source: nsjail
+Section: utils
+Priority: optional
+Maintainer: Marcin Bieńkowski <marcin.bienkowski@gmail.com>
+Build-Depends: debhelper (>= 10), dh-apparmor, protobuf-compiler, libprotobuf-dev, libnl-route-3-dev, pkg-config, bison, flex, g++, make
+Standards-Version: 4.0.0
+Homepage: https://github.com/google/nsjail
+
+Package: nsjail
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Suggests: passt
+Description: A light-weight process isolation tool
+ NsJail is a process isolation tool for Linux. It makes use of Linux
+ namespaces and seccomp-bpf syscall filters (with help of the kafel
+ library) to sandbox processes.
+ .
+ Suggests passt: provides the pasta(1) binary nsjail execs for its optional
+ pasta-backed networking mode (user_net.pasta in the config); not needed for
+ nsjail's other networking modes (e.g. the built-in nstun NAT backend).

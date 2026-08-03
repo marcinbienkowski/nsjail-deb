@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = optimize=-lto
+export DEB_BUILD_OPTIONS += noddebs
+
+%:
+	dh $@
+
+override_dh_auto_test:
+
+override_dh_install:
+	dh_install
+	if [ -e debian/apparmor/nsjail ]; then dh_apparmor --profile-name=nsjail; fi

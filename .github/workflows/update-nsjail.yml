@@ -1,0 +1,66 @@
+name: Update nsjail
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Bump nsjail submodule to latest upstream
+        id: bump
+        run: |
+          OLD_SHA="$(git -C nsjail rev-parse --short HEAD)"
+          git submodule update --remote nsjail
+          NEW_SHA="$(git -C nsjail rev-parse --short HEAD)"
+          if git diff --quiet -- nsjail; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            # bump-changelog.sh (below) starts with a plain `submodule
+            # update --init`, which checks out whatever commit is staged in
+            # the index - not the working tree. `--remote` above only moved
+            # the working tree, so without staging it here first, that
+            # would silently revert this bump.
+            git add nsjail
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "old_sha=$OLD_SHA" >> "$GITHUB_OUTPUT"
+            echo "new_sha=$NEW_SHA" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dpkg-dev
+        if: steps.bump.outputs.changed == 'true'
+        run: sudo apt-get update && sudo apt-get install -y dpkg-dev
+
+      - name: Regenerate debian/changelog
+        if: steps.bump.outputs.changed == 'true'
+        run: bash scripts/bump-changelog.sh
+
+      - name: Open pull request
+        if: steps.bump.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          add-paths: |
+            nsjail
+            debian/changelog
+          commit-message: "Bump nsjail submodule to ${{ steps.bump.outputs.new_sha }}"
+          branch: bump-nsjail
+          delete-branch: true
+          title: "Bump nsjail submodule to ${{ steps.bump.outputs.new_sha }}"
+          body: |
+            Automated daily check found upstream has moved.
+
+            nsjail: ${{ steps.bump.outputs.old_sha }} → ${{ steps.bump.outputs.new_sha }}
+            https://github.com/google/nsjail/compare/${{ steps.bump.outputs.old_sha }}...${{ steps.bump.outputs.new_sha }}
+
+            Opened without building - the `Build .deb` workflow will build and smoke-test this
+            PR automatically and must pass before it can be merged.
