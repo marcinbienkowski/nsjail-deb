@@ -11,8 +11,8 @@ NSJAIL_DIR="$REPO_ROOT/nsjail"
 DISTRO="${1:-ubuntu}"
 
 case "$DISTRO" in
-    ubuntu) LOCAL_SUFFIX="~ubuntu24.04"; CODENAME="noble" ;;
-    debian) LOCAL_SUFFIX="~trixie"; CODENAME="trixie" ;;
+    ubuntu) LOCAL_SUFFIX="~ubuntu-24.04-noble"; CODENAME="noble" ;;
+    debian) LOCAL_SUFFIX="~debian-13-trixie"; CODENAME="trixie" ;;
     *) echo "Usage: $0 [ubuntu|debian]" >&2; exit 1 ;;
 esac
 
@@ -34,10 +34,10 @@ fi
 
 cd "$NSJAIL_DIR"
 
-# Distro-specific local version suffix (e.g. ...-2~ubuntu24.04 vs ...-2~trixie) so the two
-# artifacts don't collide if released together. No per-distro rebuild counter is needed on top of
-# that - unlike real Debian backports (independent, asynchronous uploads of a fixed upstream
-# version, hence their own ~bpoN counter), both distro builds here share the same
+# Distro-specific local version suffix (e.g. ...-2~ubuntu-24.04-noble vs ...-2~debian-13-trixie)
+# so the two artifacts don't collide if released together. No per-distro rebuild counter is needed
+# on top of that - unlike real Debian backports (independent, asynchronous uploads of a fixed
+# upstream version, hence their own ~bpoN counter), both distro builds here share the same
 # debian/changelog: any change that would justify a rebuild already bumps the shared -N revision,
 # which then flows into both suffixed versions identically. Only touches this build copy of
 # debian/changelog, never the one committed in the repo. Uses --newversion (not --local) to set

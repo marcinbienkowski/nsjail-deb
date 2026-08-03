@@ -119,8 +119,9 @@ bash scripts/build.sh [ubuntu|debian]
 ```
 
 Defaults to `ubuntu`. The two produce separate, non-collidable `.deb`s (distinct
-`~ubuntu24.04`/`~trixie` version suffixes) since `dh_shlibdeps` bakes in `Depends:` constraints
-from whatever library versions are on the build machine, which differ between the two distros.
+`~ubuntu-24.04-noble`/`~debian-13-trixie` version suffixes) since `dh_shlibdeps` bakes in
+`Depends:` constraints from whatever library versions are on the build machine, which differ
+between the two distros.
 `debian` skips the [AppArmor profile](#apparmor-profile-unprivileged-nsjail-on-ubuntu), which is
 Ubuntu-only.
 
