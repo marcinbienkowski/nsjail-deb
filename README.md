@@ -2,7 +2,7 @@
 
 [![Build .deb](https://github.com/marcinbienkowski/nsjail-deb/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/marcinbienkowski/nsjail-deb/actions/workflows/build.yml)
 
-Debian packaging for [nsjail](https://github.com/google/nsjail), Google's light-weight process isolation tool.
+Debian packaging for [nsjail](https://github.com/google/nsjail), a light-weight process isolation tool.
 
 The `nsjail/` directory is a git submodule pointing to upstream. The `debian/` directory contains the packaging files that are injected into the source tree at build time.
 
