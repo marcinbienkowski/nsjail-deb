@@ -1,3 +1,9 @@
+nsjail (3.6+git20260825-1) unstable; urgency=medium
+
+  * Bump nsjail submodule to upstream commit c398ceda (20260825).
+
+ -- Marcin Bieńkowski <marcin.bienkowski@gmail.com>  Wed, 26 Aug 2026 07:11:17 +0000
+
 nsjail (3.6+git20260727-2) unstable; urgency=medium
 
   * Ship an AppArmor profile granting nsjail unprivileged CLONE_NEWUSER, so
