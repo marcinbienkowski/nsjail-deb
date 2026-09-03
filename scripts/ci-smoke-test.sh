@@ -17,6 +17,7 @@ TESTS_DIR="$REPO_ROOT/nsjail/tests"
 CONFIGS_DIR="$REPO_ROOT/nsjail/configs"
 NSJAIL=$(command -v nsjail)
 FAIL=0
+
 # Set by build-debian's CI step only - skips tests that are artifacts of running as root in a
 # bare `container:` job (no login session, GH-Actions-owned $HOME) rather than real Debian/nsjail
 # bugs. See ci-smoke-test-README.md. Never set for the Ubuntu job or a real-machine run.
@@ -110,10 +111,13 @@ fi
 run_test "\$HOME mount is read-only without --rw" 77 \
 	"$NSJAIL $OLD_EF -Q -Mo --chroot / --user 99999 --group 99999 -- /bin/bash -c 'touch $HOME/nsjail_test_home || exit 77'"
 if [ "$SKIP_CONTAINER_QUIRKS" = 1 ]; then
-	skip_test "/run/user/\$UID stays writable regardless of --rw (already-mounted tmpfs)"
+	skip_test "/run/user/\$UID is read-only without --rw (recursive submount remount)"
+	skip_test "/run/user/\$UID is writable with --rw (recursive submount remount)"
 else
-	run_test "/run/user/\$UID stays writable regardless of --rw (already-mounted tmpfs)" 0 \
-		"$NSJAIL $OLD_EF -Q -Mo --chroot / --user 99999 --group 99999 -- /bin/bash -c 'touch /run/user/$(id -u)/nsjail_test_run && rm -f /run/user/$(id -u)/nsjail_test_run'"
+	run_test "/run/user/\$UID is read-only without --rw (recursive submount remount)" 77 \
+		"$NSJAIL $OLD_EF -Q -Mo --chroot / --user 99999 --group 99999 -- /bin/bash -c 'touch /run/user/$(id -u)/nsjail_test_run || exit 77'"
+	run_test "/run/user/\$UID is writable with --rw (recursive submount remount)" 0 \
+		"$NSJAIL $OLD_EF -Q -Mo --rw --chroot / --user 99999 --group 99999 -- /bin/bash -c 'touch /run/user/$(id -u)/nsjail_test_run && rm -f /run/user/$(id -u)/nsjail_test_run'"
 fi
 
 # --- exec_fd / execveat into an otherwise-empty mount namespace ---
