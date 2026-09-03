@@ -53,7 +53,7 @@ outbound TCP), traffic rules (4 variants), a `HOST_TO_GUEST` inbound proxy test 
 
 `build-debian` runs inside a GitHub Actions `container:` job with `--privileged` (see
 [README.md](../README.md#ci) for why nsjail's unprivileged sandboxing needs that there at all).
-That's a bare root shell with no login session, unlike `build-ubuntu`'s real VM. Three tests
+That's a bare root shell with no login session, unlike `build-ubuntu`'s real VM. Four tests
 fail there for reasons specific to that environment, not to Debian or nsjail:
 
 - **pasta NAT: outbound TCP works**: times out (exit 137). Likely pasta struggling with the
@@ -62,9 +62,10 @@ fail there for reasons specific to that environment, not to Debian or nsjail:
 - **`$HOME` mount is writable with `--rw`**: `permission denied` touching
   `/github/home/nsjail_test_home`. That path is a GitHub-Actions-owned mount for container jobs,
   not a normal user's home directory, and its ownership doesn't match what the test expects.
-- **`/run/user/$UID` stays writable regardless of `--rw`**: `/run/user/0` doesn't exist. No
-  `pam_systemd`/login session ever created it, since this is a bare `container:` job, not a real
-  login.
+- **`/run/user/$UID` is read-only without `--rw`** and **`/run/user/$UID` is writable with
+  `--rw`**: `/run/user/0` doesn't exist. No `pam_systemd`/login session ever created it, since
+  this is a bare `container:` job, not a real login. The `--rw` half fails on `ENOENT`; the
+  read-only half would pass on `ENOENT` too, without any remount being exercised.
 
 These are skipped only for `build-debian`; `build-ubuntu` (a real VM) and any manual/local run
 still exercise all of them.

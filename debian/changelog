@@ -1,3 +1,9 @@
+nsjail (3.6+git20260827-1) unstable; urgency=medium
+
+  * Bump nsjail submodule to upstream commit f100fd91 (20260827).
+
+ -- Marcin Bieńkowski <marcin.bienkowski@gmail.com>  Thu, 03 Sep 2026 11:21:04 +0000
+
 nsjail (3.6+git20260825-1) unstable; urgency=medium
 
   * Bump nsjail submodule to upstream commit c398ceda (20260825).

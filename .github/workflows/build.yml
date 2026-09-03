@@ -119,7 +119,7 @@ jobs:
         run: |
           apt-get install -y wget python3 strace busybox-static passt
 
-      # NSJAIL_SKIP_CONTAINER_QUIRKS skips 3 tests that are artifacts of running as root in a
+      # NSJAIL_SKIP_CONTAINER_QUIRKS skips 4 tests that are artifacts of running as root in a
       # bare `container:` job (no login session, GH-Actions-owned $HOME) - see
       # ci-smoke-test-README.md. Not set for build-ubuntu, which runs directly on the VM.
       - name: Run smoke test
