@@ -148,7 +148,10 @@ gh workflow run build.yml
 `.github/workflows/update-nsjail.yml` checks upstream nsjail daily and, if it's moved, opens a PR
 (`bump-nsjail` branch) with the submodule bump and a regenerated `debian/changelog` entry:
 `build.yml` builds and smoke-tests that PR like any other, so merging it just needs the checks to
-be green. To bump manually instead of waiting for the next cron run:
+be green. The workflow opens the PR as a GitHub App (Client ID in the repo variable
+`BUMP_APP_CLIENT_ID`, private key in the secret `BUMP_APP_PRIVATE_KEY`), because CI on a PR opened
+with the default `GITHUB_TOKEN` waits for manual approval. To bump manually instead of waiting for
+the next cron run:
 
 ```bash
 git submodule update --remote nsjail
