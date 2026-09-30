@@ -6,8 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   update:
@@ -45,10 +44,22 @@ jobs:
         if: steps.bump.outputs.changed == 'true'
         run: bash scripts/bump-changelog.sh
 
+      # Using GitHub App as an author, so build.yml starts on its own.
+      - name: Create GitHub App token
+        if: steps.bump.outputs.changed == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.BUMP_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BUMP_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Open pull request
         if: steps.bump.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
+          token: ${{ steps.app-token.outputs.token }}
           add-paths: |
             nsjail
             debian/changelog
