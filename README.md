@@ -75,11 +75,14 @@ The submodule is pinned to a specific commit, with no floating branch or tag. [U
 
 ### Build dependencies
 
+From the repo root:
+
+```bash
+sudo apt-get build-dep ./
+sudo apt-get install devscripts
 ```
-sudo apt-get install build-essential debhelper dh-apparmor devscripts dpkg-dev \
-    protobuf-compiler libprotobuf-dev libnl-route-3-dev pkg-config \
-    bison flex
-```
+
+`apt-get build-dep ./` installs the `Build-Depends` of `debian/control` together with `build-essential`. `devscripts` provides `dch`, which `scripts/build.sh` uses to set the per-distro version.
 
 ### Building
 

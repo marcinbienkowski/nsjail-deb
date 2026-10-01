@@ -53,12 +53,13 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      # build-dep installs debian/control's Build-Depends plus build-essential. devscripts
+      # provides dch for scripts/build.sh, which a package build itself doesn't need.
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential debhelper dh-apparmor devscripts dpkg-dev \
-            protobuf-compiler libprotobuf-dev libnl-route-3-dev pkg-config \
-            bison flex
+          sudo apt-get build-dep -y ./
+          sudo apt-get install -y devscripts
 
       - name: Build .deb
         run: bash scripts/build.sh
@@ -102,9 +103,8 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          apt-get install -y build-essential debhelper dh-apparmor devscripts dpkg-dev \
-            protobuf-compiler libprotobuf-dev libnl-route-3-dev pkg-config \
-            bison flex
+          apt-get build-dep -y ./
+          apt-get install -y devscripts
 
       - name: Build .deb
         run: bash scripts/build.sh debian

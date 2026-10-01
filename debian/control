@@ -10,7 +10,7 @@ Package: nsjail
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Suggests: passt
-Description: A light-weight process isolation tool
+Description: light-weight process isolation tool
  NsJail is a process isolation tool for Linux. It makes use of Linux
  namespaces and seccomp-bpf syscall filters (with help of the kafel
  library) to sandbox processes.
