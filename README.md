@@ -108,7 +108,9 @@ gh workflow run build.yml
 
 ## Updating and releasing
 
-`.github/workflows/update-nsjail.yml` checks upstream nsjail daily. If upstream has moved, it opens a PR (branch `bump-nsjail`) with the submodule bump and a regenerated `debian/changelog` entry. `build.yml` builds and smoke-tests that PR like any other, so it can be merged once the checks are green. The workflow opens the PR as a GitHub App, because CI on a PR opened with the default `GITHUB_TOKEN` waits for manual approval. The App's Client ID is in the repo variable `BUMP_APP_CLIENT_ID`, and its private key is in the secret `BUMP_APP_PRIVATE_KEY`.
+`.github/workflows/update-nsjail.yml` checks upstream nsjail daily. If upstream has moved, it opens a PR (branch `bump-nsjail`) with the submodule bump and a regenerated `debian/changelog` entry, and enables auto-merge on it. `build.yml` builds and smoke-tests that PR like any other, and GitHub merges it once both checks pass. Thus every upstream change that passes the smoke test is released without review. To hold one back, disable auto-merge on its PR with `gh pr merge --disable-auto <number>`.
+
+The workflow opens the PR and enables auto-merge as a GitHub App. CI on a PR opened with the default `GITHUB_TOKEN` waits for manual approval, and a merge made with that token would start no workflow on `main`, hence no release. The App's Client ID is in the repo variable `BUMP_APP_CLIENT_ID`, and its private key is in the secret `BUMP_APP_PRIVATE_KEY`.
 
 To bump manually without waiting for the next scheduled run, run the following on a branch and open a PR from it:
 
@@ -122,4 +124,4 @@ git commit -m "Bump nsjail submodule to <short-sha>"
 
 Stage the submodule before running `scripts/bump-changelog.sh`. The script starts with `git submodule update --init`, which checks out the commit staged in the index, so it would revert an unstaged bump. The script derives the package version from the submodule (nearest upstream tag and commit date) and prepends a `debian/changelog` entry when that version differs from the current one. Commit this entry together with the submodule. The release is tagged from the committed changelog, so a bump without the entry releases nothing.
 
-Merging a bump PR publishes the release. On every push to `main`, once both builds pass, the `release` job tags the commit as `v<version>`, with the version taken from the top `debian/changelog` entry. It then creates a GitHub Release with the two `.deb` packages, one for Ubuntu and one for Debian. If the tag already exists (e.g. after a README-only commit), nothing is released. The `pr-comment` job posts the version as a sticky PR comment, so you can see what a merge will release without a local checkout.
+Merging a bump PR, automatically or by hand, publishes the release. On every push to `main`, once both builds pass, the `release` job tags the commit as `v<version>`, with the version taken from the top `debian/changelog` entry. It then creates a GitHub Release with the two `.deb` packages, one for Ubuntu and one for Debian. If the tag already exists (e.g. after a README-only commit), nothing is released. The `pr-comment` job posts the version as a sticky PR comment, so you can see what a merge will release without a local checkout.
