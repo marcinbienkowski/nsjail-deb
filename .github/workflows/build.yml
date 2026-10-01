@@ -25,9 +25,8 @@ jobs:
         with:
           submodules: recursive
 
-      # Runs before the full build so the PR comment below shows up quickly, without waiting on
-      # the build+smoke-test - the version this reads (debian/changelog's committed top entry)
-      # doesn't depend on either.
+      # Runs before the full build so the PR comment below shows up quickly. The version this
+      # reads (the committed top entry of debian/changelog) doesn't depend on the build.
       - name: Compute package version
         id: pkg-version
         run: |
@@ -35,8 +34,7 @@ jobs:
           sudo apt-get install -y dpkg-dev
           echo "version=$(dpkg-parsechangelog -SVersion)" >>"$GITHUB_OUTPUT"
 
-      # message-id makes this a sticky comment - updated in place on later pushes to the PR
-      # rather than piling up a new one each time.
+      # message-id makes this a sticky comment, updated in place on later pushes to the PR.
       - name: Comment package version on PR
         if: github.event_name == 'pull_request'
         uses: mshick/add-pr-comment@v3.12.0

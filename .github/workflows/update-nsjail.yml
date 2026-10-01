@@ -26,10 +26,10 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             # bump-changelog.sh (below) starts with a plain `submodule
-            # update --init`, which checks out whatever commit is staged in
-            # the index - not the working tree. `--remote` above only moved
-            # the working tree, so without staging it here first, that
-            # would silently revert this bump.
+            # update --init`, which checks out the commit staged in the
+            # index. `--remote` above moved only the working tree, so
+            # without staging it here first, that would silently revert
+            # this bump.
             git add nsjail
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "old_sha=$OLD_SHA" >> "$GITHUB_OUTPUT"
@@ -73,5 +73,5 @@ jobs:
             nsjail: ${{ steps.bump.outputs.old_sha }} → ${{ steps.bump.outputs.new_sha }}
             https://github.com/google/nsjail/compare/${{ steps.bump.outputs.old_sha }}...${{ steps.bump.outputs.new_sha }}
 
-            Opened without building - the `Build .deb` workflow will build and smoke-test this
-            PR automatically and must pass before it can be merged.
+            The `Build .deb` workflow builds and smoke-tests this PR, and both checks must pass
+            before it can be merged. Merging it publishes the release.

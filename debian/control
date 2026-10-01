@@ -15,6 +15,7 @@ Description: A light-weight process isolation tool
  namespaces and seccomp-bpf syscall filters (with help of the kafel
  library) to sandbox processes.
  .
- Suggests passt: provides the pasta(1) binary nsjail execs for its optional
- pasta-backed networking mode (user_net.pasta in the config); not needed for
- nsjail's other networking modes (e.g. the built-in nstun NAT backend).
+ The suggested passt package provides the pasta(1) binary, which nsjail
+ executes for its optional pasta-backed networking mode (user_net.pasta in
+ the config). nsjail's other networking modes, e.g. the built-in nstun NAT
+ backend, don't need it.
