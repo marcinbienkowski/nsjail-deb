@@ -5,47 +5,57 @@ on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
   pull_request:
     branches:
       - main
 
+# The build jobs compile upstream nsjail, i.e. run upstream code, so they get a read-only token.
+# Only the jobs that run no upstream code get write access, each just for what it needs.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  build-ubuntu:
+  # The committed top entry of debian/changelog, which the release is tagged from.
+  version:
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.pkg-version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
-          submodules: recursive
+          persist-credentials: false
 
-      # Runs before the full build so the PR comment below shows up quickly. The version this
-      # reads (the committed top entry of debian/changelog) doesn't depend on the build.
       - name: Compute package version
         id: pkg-version
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y dpkg-dev
-          echo "version=$(dpkg-parsechangelog -SVersion)" >>"$GITHUB_OUTPUT"
+        run: echo "version=$(dpkg-parsechangelog -SVersion)" >>"$GITHUB_OUTPUT"
 
+  pr-comment:
+    if: github.event_name == 'pull_request'
+    needs: version
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
       # message-id makes this a sticky comment, updated in place on later pushes to the PR.
       - name: Comment package version on PR
-        if: github.event_name == 'pull_request'
         uses: mshick/add-pr-comment@v3.12.0
         with:
           message: >-
-            Package version: `${{ steps.pkg-version.outputs.version }}`. Merging will release
-            `v${{ steps.pkg-version.outputs.version }}`, unless that tag already exists.
+            Package version: `${{ needs.version.outputs.version }}`. Merging will release
+            `v${{ needs.version.outputs.version }}`, unless that tag already exists.
           message-id: pkg-version
+
+  build-ubuntu:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          persist-credentials: false
 
       - name: Install build dependencies
         run: |
+          sudo apt-get update
           sudo apt-get install -y build-essential debhelper dh-apparmor devscripts dpkg-dev \
             protobuf-compiler libprotobuf-dev libnl-route-3-dev pkg-config \
             bison flex
@@ -70,12 +80,6 @@ jobs:
           name: nsjail-deb-ubuntu24.04
           path: nsjail_*.deb
 
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v3
-        with:
-          files: nsjail_*.deb
-
   build-debian:
     runs-on: ubuntu-24.04
     container:
@@ -94,6 +98,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Install build dependencies
         run: |
@@ -125,21 +130,17 @@ jobs:
           name: nsjail-deb-debian13
           path: nsjail_*.deb
 
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v3
-        with:
-          files: nsjail_*.deb
-
   # Releases whatever reaches main, from the .debs both build jobs just smoke-tested. A tag that
   # already exists means this version is out (e.g. a README-only commit), so nothing is released.
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [build-ubuntu, build-debian]
+    needs: [version, build-ubuntu, build-debian]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     env:
-      VERSION: ${{ needs.build-ubuntu.outputs.version }}
-      TAG: v${{ needs.build-ubuntu.outputs.version }}
+      VERSION: ${{ needs.version.outputs.version }}
+      TAG: v${{ needs.version.outputs.version }}
     steps:
       - name: Check whether the tag exists
         id: tag

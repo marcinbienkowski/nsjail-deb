@@ -93,7 +93,7 @@ The resulting `.deb` is placed in the parent directory of `nsjail/` (i.e. the re
 
 ### CI
 
-`.github/workflows/build.yml` has two build jobs, `build-ubuntu` (Ubuntu 24.04) and `build-debian` (`container: debian:13`), and a `release` job described in [Updating and releasing](#updating-and-releasing). Both build jobs install the built `.deb` and run [`scripts/ci-smoke-test.sh`](#testing-the-installed-package) against it. Outside pull requests, they also upload the `.deb` as a workflow artifact.
+`.github/workflows/build.yml` has two build jobs, `build-ubuntu` (Ubuntu 24.04) and `build-debian` (`container: debian:13`). Both install the built `.deb` and run [`scripts/ci-smoke-test.sh`](#testing-the-installed-package) against it. Outside pull requests, they also upload the `.deb` as a workflow artifact. Three small jobs around them read the package version, post it on pull requests, and publish the release (see [Updating and releasing](#updating-and-releasing)).
 
 The container of `build-debian` runs with `--privileged`, because nsjail's unprivileged sandboxing needs more than Docker's default container profile allows. nsjail's own Docker instructions upstream use the same flag. In that container, 4 of the 20 smoke tests are skipped: they fail only because the job runs in a bare container without a login session (see [scripts/ci-smoke-test-README.md](scripts/ci-smoke-test-README.md)).
 
@@ -119,6 +119,4 @@ git commit -m "Bump nsjail submodule to <short-sha>"
 
 Stage the submodule before running `scripts/bump-changelog.sh`. The script starts with `git submodule update --init`, which checks out the commit staged in the index, so it would revert an unstaged bump. The script derives the package version from the submodule (nearest upstream tag and commit date) and prepends a `debian/changelog` entry when that version differs from the current one. Commit this entry together with the submodule. The release is tagged from the committed changelog, so a bump without the entry releases nothing.
 
-Merging a bump PR publishes the release. On every push to `main`, once both builds pass, the `release` job tags the commit as `v<version>`, with the version taken from the top `debian/changelog` entry. It then creates a GitHub Release with the two `.deb` packages, one for Ubuntu and one for Debian. If the tag already exists (e.g. after a README-only commit), nothing is released. `build-ubuntu` posts the version as a sticky PR comment, so you can see what a merge will release without a local checkout.
-
-Pushing a `v<version>` tag by hand also builds and releases that commit.
+Merging a bump PR publishes the release. On every push to `main`, once both builds pass, the `release` job tags the commit as `v<version>`, with the version taken from the top `debian/changelog` entry. It then creates a GitHub Release with the two `.deb` packages, one for Ubuntu and one for Debian. If the tag already exists (e.g. after a README-only commit), nothing is released. The `pr-comment` job posts the version as a sticky PR comment, so you can see what a merge will release without a local checkout.
