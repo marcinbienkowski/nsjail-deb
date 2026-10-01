@@ -57,6 +57,7 @@ jobs:
 
       - name: Open pull request
         if: steps.bump.outputs.changed == 'true'
+        id: cpr
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ steps.app-token.outputs.token }}
@@ -73,5 +74,15 @@ jobs:
             nsjail: ${{ steps.bump.outputs.old_sha }} → ${{ steps.bump.outputs.new_sha }}
             https://github.com/google/nsjail/compare/${{ steps.bump.outputs.old_sha }}...${{ steps.bump.outputs.new_sha }}
 
-            The `Build .deb` workflow builds and smoke-tests this PR, and both checks must pass
-            before it can be merged. Merging it publishes the release.
+            The `Build .deb` workflow builds and smoke-tests this PR. Auto-merge is enabled, so
+            GitHub merges it once both checks pass, and the merge publishes the release.
+
+      # The merge then counts as a push by the App, which starts build.yml on main and with it
+      # the release. A merge pushed with GITHUB_TOKEN would start no workflow.
+      - name: Enable auto-merge
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: >-
+          gh pr merge --auto --squash --repo "$GITHUB_REPOSITORY"
+          "${{ steps.cpr.outputs.pull-request-number }}"
