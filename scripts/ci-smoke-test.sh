@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
-# Smoke test for the installed nsjail .deb (tests the `nsjail` binary on
-# $PATH, not a locally-built ./nsjail). A curated subset of nsjail's own
-# `make test` suite (nsjail/Makefile), reading .cfg files straight from the
-# nsjail/ submodule checkout (nsjail/tests/, nsjail/configs/) rather than
-# hand-copied duplicates.
+
+# Smoke test for the installed nsjail .deb (tests the `nsjail` binary on $PATH, not
+# a locally-built ./nsjail). A curated subset of nsjail's own `make test` suite
+# (nsjail/Makefile), reading .cfg files straight from the nsjail/ submodule checkout
+# (nsjail/tests/, nsjail/configs/) rather than hand-copied duplicates.
 #
 # See scripts/ci-smoke-test-README.md for what's covered, what's
 # deliberately excluded (and why), and known gotchas hit while validating.
-#
-# Requires: wget, python3, strace, busybox-static (all installable via apt on
-# ubuntu-latest).
+
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -121,9 +119,7 @@ else
 fi
 
 # --- exec_fd / execveat into an otherwise-empty mount namespace ---
-# busybox sh reads commands from stdin; give it a source that never hits EOF
-# so it actually blocks until time_limit kills it, instead of exiting 0 the
-# instant stdin is /dev/null (as it is in a non-interactive CI step).
+# busybox sh reads commands from stdin; give it a source that never hits EOF.
 run_test "static busybox via exec_fd in an empty mount ns" 137 \
 	"$NSJAIL --config $CONFIGS_DIR/static-busybox-with-execveat.cfg -Q -t 1 < /dev/zero"
 

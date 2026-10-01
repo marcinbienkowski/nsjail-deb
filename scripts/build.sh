@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Usage: scripts/build.sh [ubuntu|debian]
-#
+
 # "ubuntu" (default) ships the AppArmor profile that grants nsjail unprivileged
 # CLONE_NEWUSER (see README.md - Ubuntu-only restriction). "debian" skips it -
 # Debian needs none of that.
+
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -35,14 +36,8 @@ fi
 cd "$NSJAIL_DIR"
 
 # Distro-specific local version suffix (e.g. ...-2~ubuntu-24.04-noble vs ...-2~debian-13-trixie)
-# so the two artifacts don't collide if released together. No per-distro rebuild counter is needed
-# on top of that - unlike real Debian backports (independent, asynchronous uploads of a fixed
-# upstream version, hence their own ~bpoN counter), both distro builds here share the same
-# debian/changelog: any change that would justify a rebuild already bumps the shared -N revision,
-# which then flows into both suffixed versions identically. Only touches this build copy of
-# debian/changelog, never the one committed in the repo. Uses --newversion (not --local) to set
-# the exact version, since --local also auto-increments the revision and merges suffixes in
-# non-obvious ways (e.g. "-2" + "--local ~trixie1" once produced "-2~trixie11", not "-2~trixie1").
+# so the two artifacts don't collide if released together. Both distro builds here share the same
+# debian/changelog: any change that would justify a rebuild already bumps the shared -N revision.
 MAINTAINER="$(dpkg-parsechangelog -SMaintainer)"
 CURRENT_VERSION="$(dpkg-parsechangelog -SVersion)"
 DEBFULLNAME="${MAINTAINER% <*}" DEBEMAIL="${MAINTAINER#*<}" DEBEMAIL="${DEBEMAIL%>}" \
