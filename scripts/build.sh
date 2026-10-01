@@ -2,8 +2,8 @@
 # Usage: scripts/build.sh [ubuntu|debian]
 
 # "ubuntu" (default) ships the AppArmor profile that grants nsjail unprivileged
-# CLONE_NEWUSER (see README.md - Ubuntu-only restriction). "debian" skips it -
-# Debian needs none of that.
+# CLONE_NEWUSER (see the AppArmor section of README.md). "debian" skips it, since
+# Debian doesn't restrict unprivileged user namespaces this way.
 
 set -euo pipefail
 

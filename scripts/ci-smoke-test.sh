@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
-# Smoke test for the installed nsjail .deb (tests the `nsjail` binary on $PATH, not
-# a locally-built ./nsjail). A curated subset of nsjail's own `make test` suite
-# (nsjail/Makefile), reading .cfg files straight from the nsjail/ submodule checkout
-# (nsjail/tests/, nsjail/configs/) rather than hand-copied duplicates.
+# Smoke test for the installed nsjail .deb, i.e. the `nsjail` binary on $PATH. A curated
+# subset of nsjail's own `make test` suite (nsjail/Makefile), reading .cfg files straight
+# from the nsjail/ submodule checkout (nsjail/tests/, nsjail/configs/).
 #
-# See scripts/ci-smoke-test-README.md for what's covered, what's
-# deliberately excluded (and why), and known gotchas hit while validating.
+# See scripts/ci-smoke-test-README.md for what's covered and what's excluded, and why.
 
 set -euo pipefail
 
@@ -16,9 +14,9 @@ CONFIGS_DIR="$REPO_ROOT/nsjail/configs"
 NSJAIL=$(command -v nsjail)
 FAIL=0
 
-# Set by build-debian's CI step only - skips tests that are artifacts of running as root in a
-# bare `container:` job (no login session, GH-Actions-owned $HOME) rather than real Debian/nsjail
-# bugs. See ci-smoke-test-README.md. Never set for the Ubuntu job or a real-machine run.
+# Set only by build-debian's CI step. Skips tests that fail only because they run as root in a
+# bare `container:` job (no login session, $HOME owned by GitHub Actions). See
+# ci-smoke-test-README.md.
 SKIP_CONTAINER_QUIRKS="${NSJAIL_SKIP_CONTAINER_QUIRKS:-0}"
 
 GREEN='\033[32m'
@@ -87,8 +85,8 @@ run_test "traffic rule: mixed IPv4/IPv6 rules" 137 \
 run_test "HOST_TO_GUEST proxy forwards IPv4 and IPv6 loopback traffic" 77 \
 	"{ $NSJAIL --config $TESTS_DIR/dns_http_host_to_guest.cfg -Q -t 3 & }; sleep 1; wget -4 -q -O /dev/null --timeout=5 http://127.0.0.1:8080/ && wget -6 -q -O /dev/null --timeout=5 http://[::1]:8080/ && exit 77"
 
-# --- Mount/filesystem isolation (--experimental_mnt=old; =new is currently
-# broken here whenever /tmp is already a tmpfs, see exclusions above) ---
+# --- Mount/filesystem isolation (--experimental_mnt=old; =new fails whenever /tmp is
+# already a tmpfs, see ci-smoke-test-README.md) ---
 OLD_EF="--experimental_mnt=old"
 run_test "tmpfs mount is writable" 0 \
 	"$NSJAIL $OLD_EF -Q -Mo --chroot / -m none:/tmp:tmpfs --user 99999 --group 99999 -- /bin/bash -c 'touch /tmp/nsjail_test && rm -f /tmp/nsjail_test'"
