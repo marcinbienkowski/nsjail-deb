@@ -18,6 +18,8 @@ permissions:
 jobs:
   build-ubuntu:
     runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.pkg-version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -33,7 +35,6 @@ jobs:
           sudo apt-get install -y dpkg-dev
           echo "version=$(dpkg-parsechangelog -SVersion)" >>"$GITHUB_OUTPUT"
 
-      # See README.md's "Updating and releasing": the tag to push after merge is `v<this version>`.
       # message-id makes this a sticky comment - updated in place on later pushes to the PR
       # rather than piling up a new one each time.
       - name: Comment package version on PR
@@ -41,8 +42,8 @@ jobs:
         uses: mshick/add-pr-comment@v3.12.0
         with:
           message: >-
-            Package version: `${{ steps.pkg-version.outputs.version }}` — tag to push after
-            merge: `v${{ steps.pkg-version.outputs.version }}`
+            Package version: `${{ steps.pkg-version.outputs.version }}`. Merging will release
+            `v${{ steps.pkg-version.outputs.version }}`, unless that tag already exists.
           message-id: pkg-version
 
       - name: Install build dependencies
@@ -81,22 +82,15 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: debian:13
-      # nsjail's own upstream README documents `docker run --privileged` as how to run it in
-      # Docker at all, and nsjail's own CI never attempts anything narrower. Confirmed locally
-      # that no smaller combination of --cap-add/--security-opt gets past nsjail's pivot_root
-      # step - only --privileged does.
+      # nsjail's README documents `docker run --privileged` as how to run it in Docker at all.
       options: --privileged
     steps:
-      # actions/checkout needs `git` on PATH for submodule support, and this base image has
-      # neither it nor ca-certificates preinstalled - has to run before checkout itself.
       - name: Install checkout prerequisites
         run: |
           apt-get update
           apt-get install -y git ca-certificates
-          # actions/checkout only registers safe.directory in a config scoped to its own step
-          # (container jobs mount the workspace with the host runner's UID, which doesn't match
-          # the container's root - git's dubious-ownership check then blocks our own later git
-          # commands, e.g. in scripts/bump-changelog.sh, unless we register it ourselves too).
+          # The workspace is owned by the runner's UID, not the container's root, so git refuses
+          # to run in it. actions/checkout's own safe.directory setting doesn't outlive its step.
           git config --global --add safe.directory '*'
 
       - uses: actions/checkout@v7
@@ -120,8 +114,7 @@ jobs:
           apt-get install -y wget python3 strace busybox-static passt
 
       # NSJAIL_SKIP_CONTAINER_QUIRKS skips 4 tests that are artifacts of running as root in a
-      # bare `container:` job (no login session, GH-Actions-owned $HOME) - see
-      # ci-smoke-test-README.md. Not set for build-ubuntu, which runs directly on the VM.
+      # bare `container:` job, see ci-smoke-test-README.md.
       - name: Run smoke test
         env:
           NSJAIL_SKIP_CONTAINER_QUIRKS: "1"
@@ -139,3 +132,50 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: nsjail_*.deb
+
+  # Releases whatever reaches main, from the .debs both build jobs just smoke-tested. A tag that
+  # already exists means this version is out (e.g. a README-only commit), so nothing is released.
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build-ubuntu, build-debian]
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ needs.build-ubuntu.outputs.version }}
+      TAG: v${{ needs.build-ubuntu.outputs.version }}
+    steps:
+      - name: Check whether the tag exists
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          matches="$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$TAG" \
+            --jq "map(select(.ref == \"refs/tags/$TAG\")) | length")"
+          if [ "$matches" -gt 0 ]; then
+            echo "$TAG already exists, nothing to release."
+            echo "exists=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/download-artifact@v8
+        if: steps.tag.outputs.exists == 'false'
+        with:
+          pattern: nsjail-deb-*
+          merge-multiple: true
+          path: debs
+
+      # VERSION is read from the committed debian/changelog before the build, while the .debs
+      # carry whatever version scripts/bump-changelog.sh settled on during it.
+      - name: Check .deb versions match the tag
+        if: steps.tag.outputs.exists == 'false'
+        run: |
+          ls debs
+          [ "$(find debs -name "nsjail_${VERSION}~*.deb" | wc -l)" -eq 2 ]
+
+      - name: Create GitHub Release
+        if: steps.tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ env.TAG }}
+          target_commitish: ${{ github.sha }}
+          files: debs/nsjail_*.deb
