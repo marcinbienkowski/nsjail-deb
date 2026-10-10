@@ -75,7 +75,7 @@ jobs:
             https://github.com/google/nsjail/compare/${{ steps.bump.outputs.old_sha }}...${{ steps.bump.outputs.new_sha }}
 
             The `Build .deb` workflow builds and smoke-tests this PR. Auto-merge is enabled, so
-            GitHub merges it once both checks pass, and the merge publishes the release.
+            GitHub merges it once all checks pass, and the merge publishes the release.
 
       # The merge then counts as a push by the App, which starts build.yml on main and with it
       # the release. A merge pushed with GITHUB_TOKEN would start no workflow.

@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# Usage: scripts/build.sh [ubuntu|debian]
 
-# "ubuntu" (default) ships the AppArmor profile that grants nsjail unprivileged
-# CLONE_NEWUSER (see the AppArmor section of README.md). "debian" skips it, since
-# Debian doesn't restrict unprivileged user namespaces this way.
+# Builds the .deb for the distro of the build host, read from /etc/os-release. dh_shlibdeps
+# derives the Depends: versions from the host's libraries, so the package fits only that distro
+# anyway. Ubuntu builds ship the AppArmor profile that grants nsjail unprivileged CLONE_NEWUSER
+# (see the AppArmor section of README.md). Debian builds skip it, since Debian doesn't restrict
+# unprivileged user namespaces this way.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NSJAIL_DIR="$REPO_ROOT/nsjail"
-DISTRO="${1:-ubuntu}"
 
-case "$DISTRO" in
-    ubuntu) LOCAL_SUFFIX="~ubuntu-24.04-noble"; CODENAME="noble" ;;
-    debian) LOCAL_SUFFIX="~debian-13-trixie"; CODENAME="trixie" ;;
-    *) echo "Usage: $0 [ubuntu|debian]" >&2; exit 1 ;;
+. /etc/os-release
+case "$ID" in
+    ubuntu | debian) ;;
+    *) echo "Unsupported distro: $ID" >&2; exit 1 ;;
 esac
 
 bash "$REPO_ROOT/scripts/bump-changelog.sh"
@@ -29,20 +29,21 @@ cleanup() {
 trap cleanup EXIT
 
 cp -r "$REPO_ROOT/debian" "$NSJAIL_DIR/"
-if [ "$DISTRO" = debian ]; then
+if [ "$ID" = debian ]; then
     rm -rf "$NSJAIL_DIR/debian/apparmor" "$NSJAIL_DIR/debian/nsjail.install"
 fi
 
 cd "$NSJAIL_DIR"
 
 # Distro-specific local version suffix (e.g. ...-2~ubuntu-24.04-noble vs ...-2~debian-13-trixie)
-# so the two artifacts don't collide if released together. Both distro builds here share the same
+# so the artifacts don't collide when released together. All distro builds here share the same
 # debian/changelog: any change that would justify a rebuild already bumps the shared -N revision.
 MAINTAINER="$(dpkg-parsechangelog -SMaintainer)"
 CURRENT_VERSION="$(dpkg-parsechangelog -SVersion)"
 DEBFULLNAME="${MAINTAINER% <*}" DEBEMAIL="${MAINTAINER#*<}" DEBEMAIL="${DEBEMAIL%>}" \
-    dch --newversion "${CURRENT_VERSION}${LOCAL_SUFFIX}" --distribution "$CODENAME" \
-    --force-distribution --force-bad-version "${DISTRO^} build."
+    dch --newversion "${CURRENT_VERSION}~${ID}-${VERSION_ID}-${VERSION_CODENAME}" \
+    --distribution "$VERSION_CODENAME" --force-distribution --force-bad-version \
+    "${ID^} ${VERSION_ID} build."
 
 dpkg-buildpackage -us -uc -b
 

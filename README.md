@@ -10,7 +10,7 @@ The `nsjail/` directory is a git submodule pointing to upstream. The `debian/` d
 
 ### Installation
 
-Download the `.deb` from the repo's [Releases](https://github.com/marcinbienkowski/nsjail-deb/releases) page and install it:
+Download the `.deb` for your release from the repo's [Releases](https://github.com/marcinbienkowski/nsjail-deb/releases) page. Its file name ends with the release it was built for, e.g. `ubuntu-26.04-resolute_amd64.deb`. Install it:
 
 ```bash
 sudo apt-get install -y ./nsjail_*.deb
@@ -51,7 +51,7 @@ nsjail upstream already ships its own `debian/` packaging. Our `debian/` overrid
 
 nsjail needs `CLONE_NEWUSER` (an unprivileged user namespace) for its sandboxing, and building its own mount tree requires an `MS_PRIVATE` remount of `/`. Since Ubuntu 23.10, AppArmor denies unprivileged `CLONE_NEWUSER` by default, unless the calling binary runs under a profile that explicitly grants it. The sysctl `kernel.apparmor_restrict_unprivileged_userns=1` controls this, on top of the older `kernel.unprivileged_userns_clone`. Without that grant, even non-root nsjail invocations fail with `mount('/', MS_REC|MS_PRIVATE): Permission denied`. The restriction is specific to Ubuntu: Debian has no such sysctl.
 
-`debian/apparmor/nsjail` grants just `userns,` to `/usr/bin/nsjail` and leaves it otherwise unconfined, so the installed package works unprivileged out of the box on Ubuntu. `debian/nsjail.install` installs the profile to `/etc/apparmor.d/nsjail`, and `dh_apparmor` in `debian/rules` makes `postinst` reload it automatically. `debian/rules` calls `dh_apparmor` only if `debian/apparmor/nsjail` is present. `scripts/build.sh debian` doesn't copy that file or `debian/nsjail.install` onto the submodule, so the Debian build skips the profile entirely. Debian's kernel doesn't restrict unprivileged `CLONE_NEWUSER` this way, so it needs no profile.
+`debian/apparmor/nsjail` grants just `userns,` to `/usr/bin/nsjail` and leaves it otherwise unconfined, so the installed package works unprivileged out of the box on Ubuntu. `debian/nsjail.install` installs the profile to `/etc/apparmor.d/nsjail`, and `dh_apparmor` in `debian/rules` makes `postinst` reload it automatically. `debian/rules` calls `dh_apparmor` only if `debian/apparmor/nsjail` is present. On a Debian build host, `scripts/build.sh` doesn't copy that file or `debian/nsjail.install` onto the submodule, so the Debian build skips the profile entirely. Debian's kernel doesn't restrict unprivileged `CLONE_NEWUSER` this way, so it needs no profile.
 
 ## Building from source
 
@@ -87,16 +87,16 @@ sudo apt-get install devscripts
 ### Building
 
 ```bash
-bash scripts/build.sh [ubuntu|debian]
+bash scripts/build.sh
 ```
 
-The argument defaults to `ubuntu`. The two builds produce separate `.deb`s with distinct version suffixes (`~ubuntu-24.04-noble` and `~debian-13-trixie`). The packages themselves differ, because `dh_shlibdeps` derives the `Depends:` constraints from the library versions on the build machine, and these differ between the two distros. The `debian` build skips the [AppArmor profile](#apparmor-profile-unprivileged-nsjail-on-ubuntu), which only Ubuntu needs.
+The script builds for the distro of the build machine, which it reads from `/etc/os-release`. It supports Ubuntu and Debian. The release determines the version suffix of the `.deb`, e.g. `~ubuntu-24.04-noble`, `~ubuntu-26.04-resolute` or `~debian-13-trixie`. A package fits only the release it was built on, because `dh_shlibdeps` derives the `Depends:` constraints from the library versions on the build machine. Debian builds skip the [AppArmor profile](#apparmor-profile-unprivileged-nsjail-on-ubuntu), which only Ubuntu needs.
 
 The resulting `.deb` is placed in the parent directory of `nsjail/` (i.e. the repo root).
 
 ### CI
 
-`.github/workflows/build.yml` has two build jobs, `build-ubuntu-24-04` (directly on the runner) and `build-debian-13` (in `container: debian:13`). Both install the built `.deb` and run [`scripts/ci-smoke-test.sh`](#testing-the-installed-package) against it. Outside pull requests, they also upload the `.deb` as a workflow artifact. Three small jobs around them read the package version, post it on pull requests, and publish the release (see [Updating and releasing](#updating-and-releasing)).
+`.github/workflows/build.yml` has three build jobs. `build-ubuntu-24-04` and `build-ubuntu-26-04` run directly on the GitHub runner of their release, and `build-debian-13` runs in `container: debian:13`. Each installs the built `.deb` and run [`scripts/ci-smoke-test.sh`](#testing-the-installed-package) against it. Outside pull requests, they also upload the `.deb` as a workflow artifact. Three small jobs around them read the package version, post it on pull requests, and publish the release (see [Updating and releasing](#updating-and-releasing)).
 
 The container of `build-debian-13` runs with `--privileged`, because nsjail's unprivileged sandboxing needs more than Docker's default container profile allows. nsjail's own Docker instructions upstream use the same flag. In that container, 4 of the 20 smoke tests are skipped: they fail only because the job runs in a bare container without a login session (see [scripts/ci-smoke-test-README.md](scripts/ci-smoke-test-README.md)).
 
@@ -108,7 +108,7 @@ gh workflow run build.yml
 
 ## Updating and releasing
 
-`.github/workflows/update-nsjail.yml` checks upstream nsjail daily. If upstream has moved, it opens a PR (branch `bump-nsjail`) with the submodule bump and a regenerated `debian/changelog` entry, and enables auto-merge on it. `build.yml` builds and smoke-tests that PR like any other, and GitHub merges it once both checks pass. Thus every upstream change that passes the smoke test is released without review. To hold one back, disable auto-merge on its PR with `gh pr merge --disable-auto <number>`.
+`.github/workflows/update-nsjail.yml` checks upstream nsjail daily. If upstream has moved, it opens a PR (branch `bump-nsjail`) with the submodule bump and a regenerated `debian/changelog` entry, and enables auto-merge on it. `build.yml` builds and smoke-tests that PR like any other, and GitHub merges it once all three build checks pass. Thus every upstream change that passes the smoke test is released without review. To hold one back, disable auto-merge on its PR with `gh pr merge --disable-auto <number>`.
 
 The workflow opens the PR and enables auto-merge as a GitHub App. CI on a PR opened with the default `GITHUB_TOKEN` waits for manual approval, and a merge made with that token would start no workflow on `main`, hence no release. The App's Client ID is in the repo variable `BUMP_APP_CLIENT_ID`, and its private key is in the secret `BUMP_APP_PRIVATE_KEY`.
 
@@ -124,4 +124,4 @@ git commit -m "Bump nsjail submodule to <short-sha>"
 
 Stage the submodule before running `scripts/bump-changelog.sh`. The script starts with `git submodule update --init`, which checks out the commit staged in the index, so it would revert an unstaged bump. The script derives the package version from the submodule (nearest upstream tag and commit date) and prepends a `debian/changelog` entry when that version differs from the current one. Commit this entry together with the submodule. The release is tagged from the committed changelog, so a bump without the entry releases nothing.
 
-Merging a bump PR, automatically or by hand, publishes the release. On every push to `main`, once both builds pass, the `release` job tags the commit as `v<version>`, with the version taken from the top `debian/changelog` entry. It then creates a GitHub Release with the two `.deb` packages, one for Ubuntu and one for Debian. If the tag already exists (e.g. after a README-only commit), nothing is released. The `pr-comment` job posts the version as a sticky PR comment, so you can see what a merge will release without a local checkout.
+Merging a bump PR, automatically or by hand, publishes the release. On every push to `main`, once all builds pass, the `release` job tags the commit as `v<version>`, with the version taken from the top `debian/changelog` entry. It then creates a GitHub Release with the three `.deb` packages, for Ubuntu 24.04, Ubuntu 26.04 and Debian 13. If the tag already exists (e.g. after a README-only commit), nothing is released. The `pr-comment` job posts the version as a sticky PR comment, so you can see what a merge will release without a local checkout.
