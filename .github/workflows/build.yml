@@ -45,7 +45,7 @@ jobs:
             `v${{ needs.version.outputs.version }}`, unless that tag already exists.
           message-id: pkg-version
 
-  build-ubuntu:
+  build-ubuntu-24-04:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -81,7 +81,7 @@ jobs:
           name: nsjail-deb-ubuntu24.04
           path: nsjail_*.deb
 
-  build-debian:
+  build-debian-13:
     runs-on: ubuntu-24.04
     container:
       image: debian:13
@@ -134,7 +134,7 @@ jobs:
   # already exists means this version is out (e.g. a README-only commit), so nothing is released.
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [version, build-ubuntu, build-debian]
+    needs: [version, build-ubuntu-24-04, build-debian-13]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
