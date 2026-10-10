@@ -45,8 +45,16 @@ jobs:
             `v${{ needs.version.outputs.version }}`, unless that tag already exists.
           message-id: pkg-version
 
-  build-ubuntu-24-04:
-    runs-on: ubuntu-24.04
+  build-ubuntu:
+    strategy:
+      # A failure on one release still lets the other one finish and report.
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, check: build-ubuntu-24-04 }
+          - { runner: ubuntu-26.04, check: build-ubuntu-26-04 }
+    name: ${{ matrix.check }}
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -78,7 +86,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
-          name: nsjail-deb-ubuntu24.04
+          name: nsjail-deb-${{ matrix.runner }}
           path: nsjail_*.deb
 
   build-debian-13:
@@ -107,7 +115,7 @@ jobs:
           apt-get install -y devscripts
 
       - name: Build .deb
-        run: bash scripts/build.sh debian
+        run: bash scripts/build.sh
 
       - name: Install .deb
         run: apt-get install -y ./nsjail_*.deb
@@ -130,11 +138,11 @@ jobs:
           name: nsjail-deb-debian13
           path: nsjail_*.deb
 
-  # Releases whatever reaches main, from the .debs both build jobs just smoke-tested. A tag that
+  # Releases whatever reaches main, from the .debs all build jobs just smoke-tested. A tag that
   # already exists means this version is out (e.g. a README-only commit), so nothing is released.
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [version, build-ubuntu-24-04, build-debian-13]
+    needs: [version, build-ubuntu, build-debian-13]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -169,7 +177,7 @@ jobs:
         if: steps.tag.outputs.exists == 'false'
         run: |
           ls debs
-          [ "$(find debs -name "nsjail_${VERSION}~*.deb" | wc -l)" -eq 2 ]
+          [ "$(find debs -name "nsjail_${VERSION}~*.deb" | wc -l)" -eq 3 ]
 
       - name: Create GitHub Release
         if: steps.tag.outputs.exists == 'false'

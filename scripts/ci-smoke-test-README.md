@@ -1,6 +1,6 @@
 # ci-smoke-test.sh
 
-Smoke test for the *installed* nsjail `.deb`, i.e. for the `nsjail` binary on `$PATH`. It runs a curated subset of nsjail's own `make test` suite (`nsjail/Makefile`), trimmed to what can run unattended on a GitHub-hosted Ubuntu 24.04 runner.
+Smoke test for the *installed* nsjail `.deb`, i.e. for the `nsjail` binary on `$PATH`. It runs a curated subset of nsjail's own `make test` suite (`nsjail/Makefile`), trimmed to what can run unattended on a GitHub-hosted Ubuntu 24.04 or 26.04 runner.
 
 ## Running
 
@@ -30,10 +30,10 @@ Basic sanity (`true`/`false`), seccomp, NAT (the nstun backend with IPv6 only, a
 
 ### Additionally skipped only in `build-debian-13`'s CI job (`NSJAIL_SKIP_CONTAINER_QUIRKS=1`)
 
-`build-debian-13` runs inside a GitHub Actions `container:` job with `--privileged` (see [README.md](../README.md#ci) for why). The job is a bare root shell without a login session, unlike the VM of `build-ubuntu-24-04`. Four tests fail there for reasons specific to that environment, unrelated to Debian or nsjail:
+`build-debian-13` runs inside a GitHub Actions `container:` job with `--privileged` (see [README.md](../README.md#ci) for why). The job is a bare root shell without a login session, unlike the VMs of the two Ubuntu jobs. Four tests fail there for reasons specific to that environment, unrelated to Debian or nsjail:
 
 - **pasta NAT: outbound TCP works**: times out (exit 137). Pasta likely struggles with the extra layer of container networking on top of the runner's own virtualization. `passt` installs fine, so the cause is not a missing dependency.
 - **`$HOME` mount is writable with `--rw`**: `permission denied` when touching `/github/home/nsjail_test_home`. GitHub Actions mounts that path for container jobs. It is not a regular home directory, and its ownership differs from what the test expects.
 - **`/run/user/$UID` is read-only without `--rw`** and **`/run/user/$UID` is writable with `--rw`**: `/run/user/0` doesn't exist, since no `pam_systemd` login session created it in a bare `container:` job. The `--rw` test fails on `ENOENT`. The read-only test would pass on `ENOENT` too, without exercising any remount.
 
-We skip these only in `build-debian-13`. `build-ubuntu-24-04` (a real VM) and any local run exercise all of them.
+We skip these only in `build-debian-13`. The Ubuntu jobs (real VMs) and any local run exercise all of them.
