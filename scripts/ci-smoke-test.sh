@@ -14,8 +14,8 @@ CONFIGS_DIR="$REPO_ROOT/nsjail/configs"
 NSJAIL=$(command -v nsjail)
 FAIL=0
 
-# Set only by build-debian's CI step. Skips tests that fail only because they run as root in a
-# bare `container:` job (no login session, $HOME owned by GitHub Actions). See
+# Set only by build-debian-13's CI step. Skips tests that fail only because they run as root in
+# a bare `container:` job (no login session, $HOME owned by GitHub Actions). See
 # ci-smoke-test-README.md.
 SKIP_CONTAINER_QUIRKS="${NSJAIL_SKIP_CONTAINER_QUIRKS:-0}"
 

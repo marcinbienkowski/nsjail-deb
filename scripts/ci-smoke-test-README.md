@@ -28,12 +28,12 @@ Basic sanity (`true`/`false`), seccomp, NAT (the nstun backend with IPv6 only, a
 - **`configs/bash-with-fake-geteuid.cfg`/`.json`**: these segfault (exit 139), reproducibly. The likely cause is that the config passes fds 100 and 3 (`pass_fd`), which may or may not exist, depending on the fd table of the invoking shell.
 - **GUI configs** (`home-documents-with-xorg-no-net.cfg`, `firefox-with-net-X11.cfg`, `firefox-with-net-wayland.cfg`, `chromium-with-net-wayland.cfg`): these need a display server and browser packages, which a bare runner doesn't have.
 
-### Additionally skipped only in `build-debian`'s CI job (`NSJAIL_SKIP_CONTAINER_QUIRKS=1`)
+### Additionally skipped only in `build-debian-13`'s CI job (`NSJAIL_SKIP_CONTAINER_QUIRKS=1`)
 
-`build-debian` runs inside a GitHub Actions `container:` job with `--privileged` (see [README.md](../README.md#ci) for why). The job is a bare root shell without a login session, unlike the VM of `build-ubuntu`. Four tests fail there for reasons specific to that environment, unrelated to Debian or nsjail:
+`build-debian-13` runs inside a GitHub Actions `container:` job with `--privileged` (see [README.md](../README.md#ci) for why). The job is a bare root shell without a login session, unlike the VM of `build-ubuntu-24-04`. Four tests fail there for reasons specific to that environment, unrelated to Debian or nsjail:
 
 - **pasta NAT: outbound TCP works**: times out (exit 137). Pasta likely struggles with the extra layer of container networking on top of the runner's own virtualization. `passt` installs fine, so the cause is not a missing dependency.
 - **`$HOME` mount is writable with `--rw`**: `permission denied` when touching `/github/home/nsjail_test_home`. GitHub Actions mounts that path for container jobs. It is not a regular home directory, and its ownership differs from what the test expects.
 - **`/run/user/$UID` is read-only without `--rw`** and **`/run/user/$UID` is writable with `--rw`**: `/run/user/0` doesn't exist, since no `pam_systemd` login session created it in a bare `container:` job. The `--rw` test fails on `ENOENT`. The read-only test would pass on `ENOENT` too, without exercising any remount.
 
-We skip these only in `build-debian`. `build-ubuntu` (a real VM) and any local run exercise all of them.
+We skip these only in `build-debian-13`. `build-ubuntu-24-04` (a real VM) and any local run exercise all of them.

@@ -96,9 +96,9 @@ The resulting `.deb` is placed in the parent directory of `nsjail/` (i.e. the re
 
 ### CI
 
-`.github/workflows/build.yml` has two build jobs, `build-ubuntu` (Ubuntu 24.04) and `build-debian` (`container: debian:13`). Both install the built `.deb` and run [`scripts/ci-smoke-test.sh`](#testing-the-installed-package) against it. Outside pull requests, they also upload the `.deb` as a workflow artifact. Three small jobs around them read the package version, post it on pull requests, and publish the release (see [Updating and releasing](#updating-and-releasing)).
+`.github/workflows/build.yml` has two build jobs, `build-ubuntu-24-04` (directly on the runner) and `build-debian-13` (in `container: debian:13`). Both install the built `.deb` and run [`scripts/ci-smoke-test.sh`](#testing-the-installed-package) against it. Outside pull requests, they also upload the `.deb` as a workflow artifact. Three small jobs around them read the package version, post it on pull requests, and publish the release (see [Updating and releasing](#updating-and-releasing)).
 
-The container of `build-debian` runs with `--privileged`, because nsjail's unprivileged sandboxing needs more than Docker's default container profile allows. nsjail's own Docker instructions upstream use the same flag. In that container, 4 of the 20 smoke tests are skipped: they fail only because the job runs in a bare container without a login session (see [scripts/ci-smoke-test-README.md](scripts/ci-smoke-test-README.md)).
+The container of `build-debian-13` runs with `--privileged`, because nsjail's unprivileged sandboxing needs more than Docker's default container profile allows. nsjail's own Docker instructions upstream use the same flag. In that container, 4 of the 20 smoke tests are skipped: they fail only because the job runs in a bare container without a login session (see [scripts/ci-smoke-test-README.md](scripts/ci-smoke-test-README.md)).
 
 To start the workflow manually, use the repo's **Actions** tab ("Build .deb" → "Run workflow") or run:
 
