@@ -1,3 +1,9 @@
+nsjail (3.6+git20261028-1) unstable; urgency=medium
+
+  * Bump nsjail submodule to upstream commit d8415bc8 (20261028).
+
+ -- Marcin Bieńkowski <marcin.bienkowski@gmail.com>  Wed, 28 Oct 2026 09:14:01 +0100
+
 nsjail (3.6+git20261001-2) unstable; urgency=medium
 
   * Add Ubuntu 26.04 build.
